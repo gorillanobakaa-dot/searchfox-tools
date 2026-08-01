@@ -17,12 +17,13 @@ your machine.** That's the entire point.
 3. [Install](#install)
 4. [The commands](#the-commands)
 5. [The killer app: safe asset shimming](#the-killer-app-safe-asset-shimming)
-6. [Searchfox query reference (the operators)](#searchfox-query-reference)
-7. [How it works under the hood](#how-it-works-under-the-hood)
-8. [For AI agents landing cold](#for-ai-agents-landing-cold)
-9. [Adapting it](#adapting-it)
-10. [Triple redundancy — where this lives](#triple-redundancy)
-11. [Provenance & versioning](#provenance--versioning)
+6. [The pref-validation suite](#the-pref-validation-suite)
+7. [Searchfox query reference (the operators)](#searchfox-query-reference)
+8. [How it works under the hood](#how-it-works-under-the-hood)
+9. [For AI agents landing cold](#for-ai-agents-landing-cold)
+10. [Adapting it](#adapting-it)
+11. [Triple redundancy — where this lives](#triple-redundancy)
+12. [Provenance & versioning](#provenance--versioning)
 
 ---
 
@@ -102,6 +103,33 @@ fx searchfox blast-radius warning.svg     # decorative? few/no refs → safe to 
 ```
 **Workflow:** run `svg-keeplist` over the asset set → build the KEEP list → feed it to
 `fx brand shim` as an exclusion → shim only what's decorative. The good technique, now guided.
+
+---
+
+## The pref-validation suite
+The same "let Mozilla's index do the compute" idea, pointed at a different problem: **is this
+`about:config` preference real, and does it belong in a hardened build?** That is not one question
+— it is *five*, and treating a searchfox hit as the whole answer is how dead, useless, and harmful
+prefs get shipped as "verified." Full dual-track write-up: **[PREF_VALIDATION.md](PREF_VALIDATION.md)**.
+
+| Tool | Axis | Answers |
+|---|---|---|
+| `sfpref.py` | **EXISTS** | Is the string a real Firefox pref? Enumerate all real prefs under a namespace. |
+| `sfconsumers.py` | **CONSUMED** | Does *production code* read it, or is it definition-only / test-only? |
+| `sfstandards.py` | **CURRENT** | Is the underlying standard real and current, or a legacy feature browsers dropped? |
+| `pref_provenance.py` | ⚠️ **SUPERSEDED** | Old GitHub-count approach — kept only as a record of a proven-wrong signal. |
+
+```bash
+python3 sfpref.py validate network.predictor.enabled     # REAL / FAKE(+nearest name)
+python3 sfconsumers.py media.cache.disk.enable           # DEFINED_AND_CONSUMED | TEST_ONLY | ...
+python3 sfstandards.py network.http.http3.enable         # standard + current/legacy status
+```
+
+**Trust rule (proven, not asserted):** standards bodies (invented it) > searchfox (built it) >
+arkenfox/Betterfox (curate it, positive signal only) > GitHub crowd (**discarded**). GitHub
+code-search *count* is an anti-signal: `network.predictor.enabled` has 1436 GitHub refs but is
+**removed** from Firefox (searchfox says 0). Count certifies dead prefs as real — never use it.
+Per-tool quick-refs: `sfpref.README.md`, `sfconsumers.README.md`, `sfstandards.README.md`.
 
 ---
 
