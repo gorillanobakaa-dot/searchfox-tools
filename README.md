@@ -117,19 +117,34 @@ prefs get shipped as "verified." Full dual-track write-up: **[PREF_VALIDATION.md
 | `sfpref.py` | **EXISTS** | Is the string a real Firefox pref? Enumerate all real prefs under a namespace. |
 | `sfconsumers.py` | **CONSUMED** | Does *production code* read it, or is it definition-only / test-only? |
 | `sfstandards.py` | **CURRENT** | Is the underlying standard real and current, or a legacy feature browsers dropped? |
+| `sfmedia.py` | **GOVERNED** (patch layer) | Is this codec string / MIME type / FourCC / feature constant real — who invented it, who governs it, does the patch use it per the standard? |
 | `pref_provenance.py` | ⚠️ **SUPERSEDED** | Old GitHub-count approach — kept only as a record of a proven-wrong signal. |
 
 ```bash
 python3 sfpref.py validate network.predictor.enabled     # REAL / FAKE(+nearest name)
 python3 sfconsumers.py media.cache.disk.enable           # DEFINED_AND_CONSUMED | TEST_ONLY | ...
 python3 sfstandards.py network.http.http3.enable         # standard + current/legacy status
+python3 sfmedia.py scan patches/01.MEDIA patches/02.GPU  # validate every token a C++ patch uses
+python3 sfmedia.py registry                              # who invented/governs each codec & MIME name
 ```
+
+The same epistemology now extends one layer below prefs: `sfmedia.py` validates the **C++
+patch layer itself** — codec strings (`av01`, `hev1`…), MIME types, PCI vendor IDs, gfxInfo
+feature constants — against their governing authorities and an untouched vanilla tree,
+offline-first. The authority list is **complete and closed** — IETF, IANA, ISO/IEC JTC 1/SC 29
+(MPEG), ITU-T, ITU-R, MP4RA (run by Apple for ISO), AOM, WebM Project, Matroska/IETF-CELLAR,
+Xiph.Org, WHATWG, PCI-SIG, freedesktop.org, the Linux kernel, and Mozilla — each identified by
+full name and role in `sfmedia.README.md`. No "and others".
+An invented identifier at this layer compiles fine and silently never matches — the exact
+failure the compiler cannot catch. First production run caught real comment-poison
+(a nonexistent pref cited in two files). Details: `sfmedia.README.md`.
 
 **Trust rule (proven, not asserted):** standards bodies (invented it) > searchfox (built it) >
 arkenfox/Betterfox (curate it, positive signal only) > GitHub crowd (**discarded**). GitHub
 code-search *count* is an anti-signal: `network.predictor.enabled` has 1436 GitHub refs but is
 **removed** from Firefox (searchfox says 0). Count certifies dead prefs as real — never use it.
-Per-tool quick-refs: `sfpref.README.md`, `sfconsumers.README.md`, `sfstandards.README.md`.
+Per-tool quick-refs: `sfpref.README.md`, `sfconsumers.README.md`, `sfstandards.README.md`,
+`sfmedia.README.md`.
 
 ---
 
